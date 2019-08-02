@@ -114,7 +114,27 @@ different costs to members (the listed costs are per half-hour 'slot'), and
 the guest user's ID is always 0. Include in your output the name of the
 facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
-
+SELECT  Facilities.name,
+		CONCAT(Members.surname, Members.firstname) AS fullname,
+		Bookings.memid,
+		Facilities.membercost,
+		Facilities.guestcost,
+		SUM(Facilities.guestcost) AS guestcosttotal,
+		SUM(Facilities.membercost) AS membercosttotal
+FROM Bookings
+LEFT JOIN Facilities
+ON Bookings.facid = Facilities.facid
+LEFT JOIN Members 
+ON Bookings.memid = Members.memid
+CASE WHEN memid = 0 THEN CASE
+						 WHEN guestcosttotal > 30 THEN 'yes'
+						 ELSE 'no' END AS MORETHAN30
+	 ELSE CASE
+		  WHEN membercosttotal > 30 THEN 'yes'
+		  ELSE 'no' END AS MORETHAN30
+WHERE starttime LIKE '2012-09-14%'
+GROUP BY memid
+ORDER BY memid
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
 
