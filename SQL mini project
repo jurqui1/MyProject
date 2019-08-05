@@ -138,7 +138,52 @@ ORDER BY memid
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
 
+SELECT 
+		CASE WHEN subsub.TotalDailyExpense > 30 THEN 'yes'
+			 ELSE 'no' END AS Morethan30
+FROM(SELECT 
+		CASE WHEN sub.memid = 0 THEN sub.guestcosttotal
+			 ELSE sub.membercosttotal END AS TotalDailyExpense
+
+FROM (SELECT Bookings.memid,
+		SUM(Facilities.guestcost) AS guestcosttotal,
+		SUM(Facilities.membercost) AS membercosttotal
+	FROM Bookings
+	LEFT JOIN Facilities
+	ON Facilities.facid = Bookings.facid
+	LEFT JOIN Members 
+	ON Bookings.memid = Members.memid
+	WHERE starttime LIKE '2012-09-14%'
+	GROUP BY memid
+	ORDER BY memid) sub) subsub
+
 
 /* Q10: Produce a list of facilities with a total revenue less than 1000.
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
+
+(SELECT  Facilities.name,
+		COUNT(Facilities.name) * Facilities.membercost AS guestmoney
+FROM `Bookings`
+LEFT JOIN Facilities
+ON Facilities.facid = Bookings.facid
+WHERE Bookings.memid != 0
+GROUP BY Facilities.name) memsub
+
+
+(SELECT  Facilities.name,
+		COUNT(Facilities.name) * Facilities.guestcost AS guestmoney
+FROM `Bookings`
+LEFT JOIN Facilities
+ON Facilities.facid = Bookings.facid
+WHERE Bookings.memid = 0
+GROUP BY Facilities.name) guestsub
+
+
+
+total cost made by each facility
+	-intitaloutlay + monthlymaintanence * months (list goes over 2 months)
+
+SELECT name,
+	initialoutlay + monthlymaintenance * 2 AS cost
+FROM `Facilities` 
