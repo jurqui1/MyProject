@@ -114,27 +114,31 @@ different costs to members (the listed costs are per half-hour 'slot'), and
 the guest user's ID is always 0. Include in your output the name of the
 facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
+
 SELECT  Facilities.name,
 		CONCAT(Members.surname, Members.firstname) AS fullname,
 		Bookings.memid,
 		Facilities.membercost,
 		Facilities.guestcost,
-		SUM(Facilities.guestcost) AS guestcosttotal,
-		SUM(Facilities.membercost) AS membercosttotal
+	CASE WHEN Bookings.memid = 0 THEN SUM(Facilities.guestcost)
+			 ELSE SUM(Facilities.membercost)  
+			 END AS totalprice,
+		CASE WHEN Bookings.memid = 0 THEN 
+			CASE WHEN SUM(Facilities.guestcost) > 30 THEN 'yes'
+				 ELSE 'no' END
+			 ELSE 
+				 CASE WHEN SUM(Facilities.membercost) > 30 THEN 'yes'
+				 ELSE 'no' END 
+				END AS Morethan30
 FROM Bookings
 LEFT JOIN Facilities
 ON Bookings.facid = Facilities.facid
 LEFT JOIN Members 
 ON Bookings.memid = Members.memid
-CASE WHEN memid = 0 THEN CASE
-						 WHEN guestcosttotal > 30 THEN 'yes'
-						 ELSE 'no' END AS MORETHAN30
-	 ELSE CASE
-		  WHEN membercosttotal > 30 THEN 'yes'
-		  ELSE 'no' END AS MORETHAN30
 WHERE starttime LIKE '2012-09-14%'
 GROUP BY memid
 ORDER BY memid
+
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
 
@@ -162,28 +166,18 @@ FROM (SELECT Bookings.memid,
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
 
-(SELECT  Facilities.name,
-		COUNT(Facilities.name) * Facilities.membercost AS guestmoney
-FROM `Bookings`
-LEFT JOIN Facilities
-ON Facilities.facid = Bookings.facid
-WHERE Bookings.memid != 0
-GROUP BY Facilities.name) memsub
+SELECT  subsub.facility,
+		subsub.price
+FROM (SELECT  sub.facility,
+		SUM(sub.cost) AS price
+FROM (SELECT Facilities.name AS facility, 
+    CASE WHEN Bookings.memid =0
+    THEN Facilities.guestcost * Bookings.slots
+    ELSE Facilities.membercost * Bookings.slots
+    END AS cost
+      FROM `Bookings`
+  INNER JOIN `Facilities` ON Bookings.facid = Facilities.facid
+  INNER JOIN `Members` ON Bookings.memid = Members.memid) sub
+GROUP BY sub.facility) subsub
 
-
-(SELECT  Facilities.name,
-		COUNT(Facilities.name) * Facilities.guestcost AS guestmoney
-FROM `Bookings`
-LEFT JOIN Facilities
-ON Facilities.facid = Bookings.facid
-WHERE Bookings.memid = 0
-GROUP BY Facilities.name) guestsub
-
-
-
-total cost made by each facility
-	-intitaloutlay + monthlymaintanence * months (list goes over 2 months)
-
-SELECT name,
-	initialoutlay + monthlymaintenance * 2 AS cost
-FROM `Facilities` 
+WHERE subsub.price < 1000 
